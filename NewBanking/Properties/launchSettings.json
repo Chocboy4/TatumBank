@@ -1,0 +1,8 @@
+﻿{
+  "profiles": {
+    "TatumBank": {
+      "commandName": "Project",
+      "commandLineArgs": "5001 http://localhost:5002 TatumBank ChocboyBank"
+    }
+  }
+}
