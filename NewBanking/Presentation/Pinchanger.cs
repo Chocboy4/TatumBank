@@ -1,8 +1,10 @@
-﻿using System;
+﻿using NewBanking.BLM;
+using NewBanking.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace NewBanking
+namespace NewBanking.Presentation
 {
     public static class PinChanger
     {

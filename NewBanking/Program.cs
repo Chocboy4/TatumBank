@@ -1,4 +1,6 @@
-﻿using NewBanking;
+﻿using NewBanking.Infrastructure;
+using NewBanking.Presentation;
+
 
 InterBankSettings.Configure(args);
 

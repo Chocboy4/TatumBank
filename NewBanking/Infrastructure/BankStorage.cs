@@ -1,10 +1,11 @@
-﻿using System;
+﻿using NewBanking.BLM;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 
 
-namespace NewBanking
+namespace NewBanking.Infrastructure
 {
     public static class BankStorage
     {

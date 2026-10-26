@@ -1,8 +1,9 @@
-﻿using System;
+﻿using NewBanking.BLM;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace NewBanking
+namespace NewBanking.Presentation
 {
     public class ConsoleHelper
     {
