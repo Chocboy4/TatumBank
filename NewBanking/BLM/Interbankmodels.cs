@@ -20,7 +20,7 @@ namespace NewBanking.BLM
         Delivered,    
         Rejected,     
         NotDelivered, 
-        Unknown       // timeout or odd response: we can't tell if the money arrived
+        Unknown      
     }
 
     public record SendResult(SendOutcome Outcome, string Message);

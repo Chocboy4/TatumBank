@@ -11,7 +11,7 @@ namespace NewBanking.Infrastructure
 {
     public static class InterBankClient
     {
-        // One shared HttpClient for the whole app. Creating a new one per request is a known mistake.
+        
         private static readonly HttpClient Http = new()
         {
             Timeout = TimeSpan.FromSeconds(10)
@@ -39,7 +39,7 @@ namespace NewBanking.Infrastructure
                     return new SendResult(SendOutcome.Delivered, parsed.Message);
                 }
 
-                // 4xx = the other bank looked at the request and said no. Nothing was credited.
+                
                 if (code is >= 400 and < 500)
                 {
                     return new SendResult(
@@ -47,13 +47,13 @@ namespace NewBanking.Infrastructure
                         parsed?.Message ?? $"The other bank rejected the request (HTTP {code}).");
                 }
 
-                // 5xx or a strange 2xx: we can't be sure what happened on the other side.
+                
                 return new SendResult(SendOutcome.Unknown, $"Unexpected response from the other bank (HTTP {code}).");
             }
             catch (HttpRequestException ex) when (
                 ex.InnerException is SocketException { SocketErrorCode: SocketError.ConnectionRefused })
             {
-                // Nothing is listening on that port, so the request never arrived.
+                
                 return new SendResult(SendOutcome.NotDelivered, "Could not reach the other bank. Is it running?");
             }
             catch (TaskCanceledException)

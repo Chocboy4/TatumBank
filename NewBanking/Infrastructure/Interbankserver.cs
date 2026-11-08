@@ -35,7 +35,7 @@ namespace NewBanking.Infrastructure
                 return;
             }
 
-            //Console.WriteLine($"Listening for other-bank transfers on port {InterBankSettings.Port}.");
+            
 
             Task.Run(() => ListenLoop(listener, accounts));
         }
@@ -64,6 +64,7 @@ namespace NewBanking.Infrastructure
         {
             try
             {
+                //Thread.Sleep(15000);
                 var (status, response) = Route(context, accounts);
                 Write(context, status, response);
             }

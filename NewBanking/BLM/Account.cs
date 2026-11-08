@@ -11,6 +11,17 @@ namespace NewBanking.BLM
         public decimal Balance { get; set; }
         public bool IsAdmin { get; set; }
         public bool IsFrozen { get; set; }
+
+        public bool NotificationsEnabled { get; set; } = true;
+        public List<Notification> Notifications { get; set; } = new();
         public List<string> Transactions { get; set; } = new();
+    }
+
+
+    public class Notification
+    {
+        public string Message { get; set; } = "";
+        public DateTime CreatedAtUtc { get; set; }
+        public bool IsRead { get; set; }
     }
 }

@@ -33,6 +33,12 @@ namespace NewBanking.Presentation
                 {
                     if (ConsoleHelper.VerifyPin(current, MaxAttempts))
                     {
+                        current.Notifications.Add(new Notification
+                        {
+                            Message = "You have successfully logged in at " + DateTime.UtcNow,
+                            CreatedAtUtc = DateTime.UtcNow,
+                            IsRead = false
+                        });
                         return current;
                     }
 

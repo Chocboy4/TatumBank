@@ -75,7 +75,13 @@ namespace NewBanking.Presentation
             lock (BankStorage.SyncRoot)
             {
                 target.IsFrozen = freeze;
-                target.Transactions.Add(logEntry);
+          
+                target.Notifications.Add(new Notification
+                {
+                    Message = logEntry,
+                    CreatedAtUtc = DateTime.UtcNow,
+                    IsRead = false
+                });
 
                 try
                 {
@@ -86,7 +92,7 @@ namespace NewBanking.Presentation
                 {
                     
                     target.IsFrozen = !freeze;
-                    target.Transactions.RemoveAt(target.Transactions.Count - 1);
+                    target.Notifications.RemoveAt(target.Notifications.Count - 1);
 
                     Console.WriteLine($"Could not save the change: {ex.Message}");
                     Console.WriteLine("No changes were made.");

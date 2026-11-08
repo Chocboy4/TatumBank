@@ -9,12 +9,14 @@ namespace NewBanking.Infrastructure
 {
     public static class BankStorage
     {
-        // Incoming HTTP transfers run on a different thread from the menu.
-        // Every change to account data, and every save, happens under this one lock.
+        
         public static readonly object SyncRoot = new();
 
         private static readonly string FileName =
             Path.Combine(AppContext.BaseDirectory, "accounts.json");
+
+        private static readonly string SettlementFileName =
+            Path.Combine(AppContext.BaseDirectory, "settlement.json");
 
         public static List<Account> LoadAccounts()
         {
@@ -52,6 +54,42 @@ namespace NewBanking.Infrastructure
                 string json = JsonSerializer.Serialize(accounts, options);
 
                 File.WriteAllText(FileName, json);
+            }
+        }
+
+        public static BillSettlement LoadSettlement()
+        {
+            if (!File.Exists(SettlementFileName))
+            {
+                return new BillSettlement();
+            }
+
+            try
+            {
+                string json = File.ReadAllText(SettlementFileName);
+
+                return JsonSerializer.Deserialize<BillSettlement>(json)
+                       ?? new BillSettlement();
+            }
+            catch (JsonException)
+            {
+                Console.WriteLine("Error: settlement.json contains invalid JSON.");
+                throw;
+            }
+        }
+
+        public static void SaveSettlement(BillSettlement settlement)
+        {
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = true
+            };
+
+            lock (SyncRoot)
+            {
+                string json = JsonSerializer.Serialize(settlement, options);
+
+                File.WriteAllText(SettlementFileName, json);
             }
         }
     }
