@@ -55,7 +55,13 @@ namespace NewBanking.Presentation
                 string oldPin = account.Pin;
 
                 account.Pin = newPin;
-                account.Transactions.Add("PIN changed");
+                
+                account.Notifications.Add(new Notification
+                {
+                    Message = "Your PIN was changed successfully.",
+                    CreatedAtUtc = DateTime.UtcNow,
+                    IsRead = false
+                });
 
                 try
                 {
@@ -66,7 +72,8 @@ namespace NewBanking.Presentation
                 {
                     
                     account.Pin = oldPin;
-                    account.Transactions.RemoveAt(account.Transactions.Count - 1);
+                    account.Notifications.RemoveAt(account.Notifications.Count - 1);
+                        
 
                     Console.WriteLine($"Could not save the new PIN: {ex.Message}");
                     Console.WriteLine("Your PIN was not changed.");

@@ -32,7 +32,7 @@ namespace NewBanking.BLM
             ConsoleHelper.Pause();
         }
 
-        
+
         private static bool BlockIfFrozen(Account current)
         {
             if (!current.IsFrozen)
@@ -40,11 +40,13 @@ namespace NewBanking.BLM
                 return false;
             }
 
-            Console.WriteLine("\nYour account is frozen. You cannot send money or buy airtime.");
+            Console.WriteLine("\nYour account is frozen. You cannot send money or buy airtime or data.");
             Console.WriteLine("You can still receive money. Please contact the bank for help.");
             ConsoleHelper.Pause();
             return true;
         }
+
+
 
         public bool Transfer(Account current)
         {
@@ -72,7 +74,7 @@ namespace NewBanking.BLM
             Console.Write("Enter the recipient's account name: ");
             string transferTo = ConsoleHelper.ReadTrimmed();
 
-            
+
             Account? recipient = _accounts.Find(
                 a => !a.IsAdmin && a.Name.Equals(transferTo, StringComparison.OrdinalIgnoreCase));
 
@@ -153,6 +155,8 @@ namespace NewBanking.BLM
             return true;
         }
 
+       
+
         public bool BuyAirtime(Account current)
         {
             if (BlockIfFrozen(current))
@@ -218,33 +222,261 @@ namespace NewBanking.BLM
 
             
 
-            lock (BankStorage.SyncRoot)
+            return ProcessBill(current, "airtime", network, phoneNumber, airtimeAmount, null, "airtime");
+        }
+
+        public bool BuyData(Account current)
+        {
+            if (BlockIfFrozen(current))
             {
-                current.Balance -= airtimeAmount;
+                return true;
+            }
 
-                current.Transactions.Add(
-                    $"Purchased airtime for {phoneNumber} on {network}, amount: ₦{airtimeAmount:N2}");
+            Console.Write("Choose network (MTN, Airtel, Glo, 9mobile): ");
+            string network = ConsoleHelper.ReadTrimmed();
 
-                try
-                {
-                    BankStorage.SaveAccounts(_accounts);
+            bool validNetwork = Array.Exists(
+                ValidNetworks,
+                n => n.Equals(network, StringComparison.OrdinalIgnoreCase));
 
-                    Console.WriteLine("\nAirtime purchase successful!");
-                    Console.WriteLine($"Phone number: {phoneNumber}");
-                    Console.WriteLine($"Amount: ₦{airtimeAmount:N2}");
-                    Console.WriteLine($"New balance: ₦{current.Balance:N2}");
-                }
-                catch (Exception ex)
-                {
-                    current.Balance += airtimeAmount;
-                    current.Transactions.RemoveAt(current.Transactions.Count - 1);
-                    Console.WriteLine($"Could not save the airtime purchase: {ex.Message}");
-                }
+            if (!validNetwork)
+            {
+                Console.WriteLine("Invalid network.");
+                ConsoleHelper.Pause();
+                return true;
+            }
+
+            Console.Write("Enter phone number: ");
+            string phoneNumber = ConsoleHelper.ReadTrimmed();
+
+            if (phoneNumber.Length != 11 ||
+                !phoneNumber.StartsWith("0") ||
+                !phoneNumber.All(char.IsDigit))
+            {
+                Console.WriteLine("Enter a valid 11-digit Nigerian phone number.");
+                ConsoleHelper.Pause();
+                return true;
+            }
+
+            
+            Console.WriteLine("\nFetching data plans...");
+            List<DataPlan>? plans = BillClient.GetPlansAsync().GetAwaiter().GetResult();
+
+            if (plans == null || plans.Count == 0)
+            {
+                Console.WriteLine("Data plans are currently unavailable. Please try again later.");
+                ConsoleHelper.Pause();
+                return true;
+            }
+
+            for (int i = 0; i < plans.Count; i++)
+            {
+                Console.WriteLine($"{i + 1}. {plans[i].Name} - ₦{plans[i].Price:N2}");
+            }
+
+            Console.Write("Select a plan: ");
+
+            if (!int.TryParse(Console.ReadLine(), out int choice) ||
+                choice < 1 || choice > plans.Count)
+            {
+                Console.WriteLine("Invalid selection.");
+                ConsoleHelper.Pause();
+                return true;
+            }
+
+            DataPlan plan = plans[choice - 1];
+
+            if (!ConsoleHelper.VerifyPin(current, MaxPinAttempts))
+            {
+                Console.WriteLine("Too many incorrect attempts. You have been logged out.");
+                ConsoleHelper.Pause();
+                return false;
+            }
+
+            if (plan.Price > current.Balance)
+            {
+                Console.WriteLine("Insufficient funds.");
+                ConsoleHelper.Pause();
+                return true;
+            }
+
+            return ProcessBill(current, "data", network, phoneNumber, plan.Price, plan.Code, $"data ({plan.Name})");
+        }
+
+        
+        private bool ProcessBill(
+            Account current,
+            string type,          
+            string network,
+            string phoneNumber,
+            decimal amount,
+            string? planCode,     
+            string label)        
+        {
+            
+            string reference = "TB-" + Guid.NewGuid().ToString("N");
+
+            
+            var request = new BillPurchaseRequest
+            {
+                Reference = reference,
+                Type = type,
+                Network = network,
+                PhoneNumber = phoneNumber,
+                Amount = amount,
+                PlanCode = planCode
+            };
+
+            
+            BillSettlement settlement = BankStorage.LoadSettlement();
+
+            var entry = new BillSettlementEntry
+            {
+                Reference = reference,
+                Account = current.Name,
+                Description = $"{label} for {phoneNumber} on {network}",
+                Amount = amount,
+                Status = "Pending"
+            };
+
+            
+            if (!HoldMoney(current, settlement, entry))
+            {
+                Console.WriteLine("Could not start the purchase. Please try again.");
+                ConsoleHelper.Pause();
+                return true;
+            }
+
+            
+            Console.WriteLine("\nContacting ChocboyBank...");
+            BillSendResult result = AskChocboy(request);
+
+            
+            if (result.Outcome == BillSendOutcome.Delivered)
+            {
+                FinishSuccess(current, settlement, entry);
+            }
+            else if (result.Outcome == BillSendOutcome.Unknown)
+            {
+                FinishPending(current, settlement, entry);
+            }
+            else
+            {
+                FinishRefund(current, settlement, entry, result.Message);
+
             }
 
             ConsoleHelper.Pause();
             return true;
         }
+
+       
+        private bool HoldMoney(Account current, BillSettlement settlement, BillSettlementEntry entry)
+        {
+            lock (BankStorage.SyncRoot)
+            {
+                current.Balance -= entry.Amount;
+                settlement.Balance += entry.Amount;
+                settlement.Entries.Add(entry);
+
+                try
+                {
+                    BankStorage.SaveAccounts(_accounts);
+                    BankStorage.SaveSettlement(settlement);
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    current.Balance += entry.Amount;
+                    settlement.Balance -= entry.Amount;
+                    settlement.Entries.Remove(entry);
+
+                    Console.WriteLine($"Save error: {ex.Message}");
+                    return false;
+                }
+            }
+        }
+
+       
+        private BillSendResult AskChocboy(BillPurchaseRequest request)
+        {
+            BillSendResult result = BillClient.PurchaseAsync(request).GetAwaiter().GetResult();
+
+            int retries = 0;
+
+            while (result.Outcome == BillSendOutcome.Unknown && retries < 2)
+            {
+                System.Threading.Thread.Sleep(500);
+                result = BillClient.PurchaseAsync(request).GetAwaiter().GetResult();
+                retries++;
+            }
+
+            return result;
+        }
+
+        
+        
+        private void FinishSuccess(Account current, BillSettlement settlement, BillSettlementEntry entry)
+        {
+            entry.Status = "Success";
+
+            current.Transactions.Add(
+                $"Purchased {entry.Description}, amount: ₦{entry.Amount:N2}");
+
+            SaveBillChanges(settlement);
+
+            Console.WriteLine("\nPurchase successful!");
+            Console.WriteLine($"{entry.Description}");
+            Console.WriteLine($"Amount: ₦{entry.Amount:N2}");
+            Console.WriteLine($"New balance: ₦{current.Balance:N2}");
+        }
+
+        
+        private void FinishRefund(Account current, BillSettlement settlement, BillSettlementEntry entry, string reason)
+        {
+            current.Balance += entry.Amount;
+            settlement.Balance -= entry.Amount;
+            entry.Status = "Reversed";
+
+            current.Transactions.Add(
+                $"FAILED {entry.Description}, ₦{entry.Amount:N2} refunded");
+
+            SaveBillChanges(settlement);
+
+            Console.WriteLine($"\nPurchase failed: {reason}");
+            Console.WriteLine($"₦{entry.Amount:N2} has been refunded. Balance: ₦{current.Balance:N2}");
+        }
+
+        
+        private void FinishPending(Account current, BillSettlement settlement, BillSettlementEntry entry)
+        {
+            current.Transactions.Add(
+                $"PENDING {entry.Description}, ₦{entry.Amount:N2}, ref: {entry.Reference}");
+
+            SaveBillChanges(settlement);
+
+            Console.WriteLine("\nWe could not confirm this purchase right now.");
+            Console.WriteLine($"Your ₦{entry.Amount:N2} is on hold and the transaction is pending.");
+            Console.WriteLine($"Reference: {entry.Reference}");
+        }
+
+        private void SaveBillChanges(BillSettlement settlement)
+        {
+            lock (BankStorage.SyncRoot)
+            {
+                try
+                {
+                    BankStorage.SaveAccounts(_accounts);
+                    BankStorage.SaveSettlement(settlement);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Could not save the purchase result: {ex.Message}");
+                }
+            }
+        }
+
+        
 
         private bool TransferToOtherBank(Account current)
         {
@@ -308,7 +540,7 @@ namespace NewBanking.BLM
             string destination = $"{toAccount} at {InterBankSettings.PeerLabel}";
             int entryIndex;
 
-            
+
             lock (BankStorage.SyncRoot)
             {
                 current.Balance -= amount;
@@ -330,7 +562,7 @@ namespace NewBanking.BLM
                 }
             }
 
-            
+
             Console.WriteLine("\nContacting the other bank...");
 
             var request = new TransferRequest(
@@ -338,7 +570,7 @@ namespace NewBanking.BLM
 
             SendResult result = InterBankClient.SendAsync(request).GetAwaiter().GetResult();
 
-            
+
             lock (BankStorage.SyncRoot)
             {
                 switch (result.Outcome)
@@ -353,7 +585,7 @@ namespace NewBanking.BLM
 
                     case SendOutcome.Rejected:
                     case SendOutcome.NotDelivered:
-                       
+
                         current.Balance += amount;
                         current.Transactions[entryIndex] =
                             $"FAILED: ₦{amount:N2} to {destination} was not sent and was refunded (ref {shortRef})";
@@ -363,7 +595,7 @@ namespace NewBanking.BLM
                         break;
 
                     default:
-                        
+
                         current.Transactions[entryIndex] =
                             $"UNCONFIRMED: ₦{amount:N2} to {destination}, the other bank did not confirm (ref {shortRef})";
 
@@ -388,7 +620,36 @@ namespace NewBanking.BLM
             return true;
         }
 
-       
+
+        public void ShowNotifications(Account current)
+        {
+            Console.WriteLine("\nNotifications");
+
+            if (current.Notifications.Count == 0)
+            {
+                Console.WriteLine("You have no notifications.");
+            }
+            else
+            {
+                for (int i = 0; i < current.Notifications.Count; i++)
+                {
+                    Notification notification = current.Notifications[i];
+
+                    string status = notification.IsRead ? "Read" : "New";
+
+                    Console.WriteLine(
+                        $"{i + 1}. [{status}] {notification.Message} ({notification.CreatedAtUtc:g})");
+
+                    notification.IsRead = true;
+                }
+
+                BankStorage.SaveAccounts(_accounts);
+            }
+
+            ConsoleHelper.Pause();
+        }
+
+
         public bool ChangePin(Account current)
         {
             return PinChanger.Change(current, _accounts);

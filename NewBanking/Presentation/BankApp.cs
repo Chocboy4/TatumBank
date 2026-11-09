@@ -76,13 +76,17 @@ namespace NewBanking.Presentation
                     Console.WriteLine("\n*** Your account is frozen. You can receive money but cannot send it. ***");
                 }
 
+
+
                 Console.WriteLine("\n1. Check balance");
                 Console.WriteLine("2. Transfer");
                 Console.WriteLine("3. Airtime");
-                Console.WriteLine("4. Transactions");
-                Console.WriteLine("5. Change PIN");
-                Console.WriteLine("6. Logout");
-                Console.WriteLine("7. Exit");
+                Console.WriteLine("4. Data");
+                Console.WriteLine("5. Transactions");
+                Console.WriteLine("6. Change PIN");
+                Console.WriteLine("7. Logout");
+                Console.WriteLine("8. Notifications");
+                Console.WriteLine("9. Exit");
                 Console.Write("\nChoose an option: ");
 
                 string choice = Console.ReadLine() ?? "";
@@ -102,23 +106,32 @@ namespace NewBanking.Presentation
                         break;
 
                     case "4":
-                        operations.ShowTransactions(current);
+                        if (!operations.BuyData(current)) return false;
                         break;
 
                     case "5":
-                        if (!operations.ChangePin(current)) return false;
+                        operations.ShowTransactions(current);
                         break;
 
                     case "6":
+                        if (!operations.ChangePin(current)) return false;
+                        break;
+
+                    case "7":
                         Console.WriteLine($"\nGoodbye, {current.Name}! You have been logged out.");
                         return false;
 
-                    case "7":
+                    case "8":
+                        operations.ShowNotifications(current);
+                        break;
+
+                    case "9":
                         Console.WriteLine("Thank you for using TatumBank!");
                         return true;
+                    
 
                     default:
-                        Console.WriteLine("Invalid option. Please choose 1 to 7.");
+                        Console.WriteLine("Invalid option. Please choose 1 to 9.");
                         ConsoleHelper.Pause();
                         break;
                 }

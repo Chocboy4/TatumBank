@@ -13,6 +13,16 @@ namespace NewBanking.BLM
         public bool IsFrozen { get; set; }
 
         public HashSet<string> ReceivedTransferIds { get; set; } = new();
+        public bool NotificationsEnabled { get; set; } = true;
+        public List<Notification> Notifications { get; set; } = new();
         public List<string> Transactions { get; set; } = new();
+    }
+
+
+    public class Notification
+    {
+        public string Message { get; set; } = "";
+        public DateTime CreatedAtUtc { get; set; }
+        public bool IsRead { get; set; }
     }
 }
