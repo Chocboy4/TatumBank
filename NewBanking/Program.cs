@@ -5,6 +5,6 @@ using NewBanking.Presentation.Banners;
 
 InterBankSettings.Configure(args);
 
-Banner.Display("Welcome to TatumBank!");
+ConsoleUI.Banner("Welcome to TatumBank!");
 
 new BankApp().Run();

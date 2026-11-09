@@ -22,6 +22,9 @@ namespace NewBanking.BLM
 
         public void CheckBalance(Account current)
         {
+            ConsoleUI.Banner("Account Balance");
+            ConsoleUI.BalanceCard(current.Name, current.Balance);
+            ConsoleUI.Pause();
             Console.WriteLine($"\nYour balance is: ₦{current.Balance:N2}");
 
             if (current.IsFrozen)
@@ -40,7 +43,7 @@ namespace NewBanking.BLM
                 return false;
             }
 
-            Console.WriteLine("\nYour account is frozen. You cannot send money or buy airtime or data.");
+            ConsoleUI.Warning("\nYour account is frozen. You cannot send money or buy airtime or data.");
             Console.WriteLine("You can still receive money. Please contact the bank for help.");
             ConsoleHelper.Pause();
             return true;
@@ -56,7 +59,7 @@ namespace NewBanking.BLM
             }
 
             Console.WriteLine("\n1. Same bank");
-            Console.WriteLine("2. Another bank");
+            Console.WriteLine("2. ChocboyBank");
             Console.Write("Choose transfer type: ");
 
             string type = ConsoleHelper.ReadTrimmed();
@@ -116,7 +119,7 @@ namespace NewBanking.BLM
 
             if (amount > current.Balance)
             {
-                Console.WriteLine("Insufficient funds.");
+                ConsoleUI.Error("Insufficient funds.");
                 ConsoleHelper.Pause();
                 return true;
             }
@@ -135,14 +138,16 @@ namespace NewBanking.BLM
 
                 current.Transactions.Add($"Transferred ₦{amount:N2} to {recipient.Name}");
                 recipient.Transactions.Add($"Received ₦{amount:N2} from {current.Name}");
+                NotificationService.Add(current, $"You sent ₦{amount:N2} to {recipient.Name}.");
+                NotificationService.Add(recipient, $"You received ₦{amount:N2} from {current.Name}.");
 
                 try
                 {
                     BankStorage.SaveAccounts(_accounts);
 
-                    Console.WriteLine(
+                    ConsoleUI.Success(
                         $"\nTransfer successful! You sent ₦{amount:N2} to {recipient.Name}.");
-                    Console.WriteLine($"Your new balance is {current.Balance:N2}.");
+                    ConsoleUI.Success($"Your new balance is {current.Balance:N2}.");
                 }
                 catch (Exception ex)
                 {
@@ -541,6 +546,8 @@ namespace NewBanking.BLM
             int entryIndex;
 
 
+
+
             lock (BankStorage.SyncRoot)
             {
                 current.Balance -= amount;
@@ -578,6 +585,7 @@ namespace NewBanking.BLM
                     case SendOutcome.Delivered:
                         current.Transactions[entryIndex] =
                             $"Transferred ₦{amount:N2} to {destination} (ref {shortRef})";
+                        
 
                         Console.WriteLine($"\nTransfer successful! You sent ₦{amount:N2} to {destination}.");
                         Console.WriteLine($"Your new balance is ₦{current.Balance:N2}.");

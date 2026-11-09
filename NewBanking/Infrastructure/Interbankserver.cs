@@ -150,6 +150,8 @@ namespace NewBanking.Infrastructure
                 recipient.Transactions.Add(
                     $"Received ₦{request.Amount:N2} from {request.FromAccount} at {request.FromBank} (ref {ShortRef(request.TransferId)})");
                 recipient.ReceivedTransferIds.Add(request.TransferId);
+                NotificationService.Add(recipient,
+    $"You received ₦{request.Amount:N2} from {request.FromAccount} at {request.FromBank}.");
 
                 try
                 {

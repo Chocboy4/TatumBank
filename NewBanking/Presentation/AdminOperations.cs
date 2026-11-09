@@ -68,6 +68,8 @@ namespace NewBanking.Presentation
                 return false;
             }
 
+            NotificationService.Add(target, "Your account has been frozen. Please contact the bank.");
+
             string logEntry = freeze
                 ? "Account frozen by admin. Sending money is disabled."
                 : "Account unfrozen by admin.";

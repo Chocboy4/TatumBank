@@ -67,9 +67,10 @@ namespace NewBanking.Presentation
         {
             while (true)
             {
-                Banner.Display($"Welcome to ChocboyBank {branch} branch, {current.Name}");
+                ConsoleUI.Banner($"Welcome to TatumBank {branch} branch, {current.Name}");
+                NotificationService.ShowUnreadAlert(current);
 
-                
+
 
                 if (current.IsFrozen)
                 {
@@ -77,17 +78,11 @@ namespace NewBanking.Presentation
                 }
 
 
-
-                Console.WriteLine("\n1. Check balance");
-                Console.WriteLine("2. Transfer");
-                Console.WriteLine("3. Airtime");
-                Console.WriteLine("4. Data");
-                Console.WriteLine("5. Transactions");
-                Console.WriteLine("6. Change PIN");
-                Console.WriteLine("7. Logout");
-                Console.WriteLine("8. Notifications");
-                Console.WriteLine("9. Exit");
-                Console.Write("\nChoose an option: ");
+                ConsoleUI.Menu(
+                    "Check balance", "Transfer", "Airtime", "Data",
+                    "Transactions", "Change PIN", "Logout", "Notifications", "Exit");
+                
+                ConsoleUI.Prompt("Choose an option: ");
 
                 string choice = Console.ReadLine() ?? "";
 
@@ -142,7 +137,7 @@ namespace NewBanking.Presentation
         {
             while (true)
             {
-                Banner.Display("TatumBank Admin");
+                ConsoleUI.Banner("TatumBank Admin");
 
                 Console.WriteLine($"\nAdmin session: {admin.Name}");
 
