@@ -10,8 +10,6 @@ namespace NewBanking.Infrastructure
 {
     public static class InterBankServer
     {
-       
-        private static readonly HashSet<string> Processed = new();
 
         public static void Start(List<Account> accounts)
         {
@@ -132,12 +130,12 @@ namespace NewBanking.Infrastructure
 
             lock (BankStorage.SyncRoot)
             {
-                if (Processed.Contains(request.TransferId))
+                // Already handled? Check every account, since the set is saved with the accounts.
+                if (accounts.Any(a => a.ReceivedTransferIds.Contains(request.TransferId)))
                 {
                     return (200, new TransferResponse(true, "Already processed."));
                 }
 
-                
                 Account? recipient = accounts.Find(a =>
                     !a.IsAdmin &&
                     a.Name.Equals(request.ToAccount.Trim(), StringComparison.OrdinalIgnoreCase));
@@ -150,6 +148,7 @@ namespace NewBanking.Infrastructure
                 recipient.Balance += request.Amount;
                 recipient.Transactions.Add(
                     $"Received ₦{request.Amount:N2} from {request.FromAccount} at {request.FromBank} (ref {ShortRef(request.TransferId)})");
+                recipient.ReceivedTransferIds.Add(request.TransferId);
 
                 try
                 {
@@ -159,10 +158,10 @@ namespace NewBanking.Infrastructure
                 {
                     recipient.Balance -= request.Amount;
                     recipient.Transactions.RemoveAt(recipient.Transactions.Count - 1);
+                    recipient.ReceivedTransferIds.Remove(request.TransferId);
                     return (500, new TransferResponse(false, "Could not save the transfer."));
                 }
 
-                Processed.Add(request.TransferId);
                 return (200, new TransferResponse(true, "Transfer received."));
             }
         }

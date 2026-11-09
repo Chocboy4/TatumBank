@@ -11,6 +11,8 @@ namespace NewBanking.BLM
         public decimal Balance { get; set; }
         public bool IsAdmin { get; set; }
         public bool IsFrozen { get; set; }
+
+        public HashSet<string> ReceivedTransferIds { get; set; } = new();
         public List<string> Transactions { get; set; } = new();
     }
 }

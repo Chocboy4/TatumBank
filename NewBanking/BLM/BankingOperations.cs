@@ -11,7 +11,7 @@ namespace NewBanking.BLM
     {
         private const int MaxPinAttempts = 3;
         private static readonly string[] ValidNetworks =
-            { "MTN", "Airtel", "Glo", "9mobile", "Etisalat" };
+            { "MTN", "Airtel", "Glo", "9mobile" };
 
         private readonly List<Account> _accounts;
 
@@ -95,6 +95,12 @@ namespace NewBanking.BLM
             if (!decimal.TryParse(Console.ReadLine(), out decimal amount))
             {
                 Console.WriteLine("Please enter a valid amount.");
+                ConsoleHelper.Pause();
+                return true;
+            }
+            if (decimal.Round(amount, 2) != amount)
+            {
+                Console.WriteLine("Amount cannot have more than 2 decimal places.");
                 ConsoleHelper.Pause();
                 return true;
             }
@@ -189,9 +195,16 @@ namespace NewBanking.BLM
                 return true;
             }
 
-            if (airtimeAmount <= 50)
+            if (airtimeAmount < 50)
             {
                 Console.WriteLine("Amount must be greater than Fourty nine Naira.");
+                ConsoleHelper.Pause();
+                return true;
+            }
+
+            if (airtimeAmount > current.Balance)
+            {
+                Console.WriteLine("Insufficient funds.");
                 ConsoleHelper.Pause();
                 return true;
             }
@@ -203,12 +216,7 @@ namespace NewBanking.BLM
                 return false;
             }
 
-            if (airtimeAmount > current.Balance)
-            {
-                Console.WriteLine("Insufficient funds.");
-                ConsoleHelper.Pause();
-                return true;
-            }
+            
 
             lock (BankStorage.SyncRoot)
             {
@@ -228,6 +236,8 @@ namespace NewBanking.BLM
                 }
                 catch (Exception ex)
                 {
+                    current.Balance += airtimeAmount;
+                    current.Transactions.RemoveAt(current.Transactions.Count - 1);
                     Console.WriteLine($"Could not save the airtime purchase: {ex.Message}");
                 }
             }

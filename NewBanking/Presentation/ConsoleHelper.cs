@@ -24,7 +24,7 @@ namespace NewBanking.Presentation
             for (int attempt = 1; attempt <= maxAttempts; attempt++)
             {
                 Console.Write("Enter your PIN: ");
-                string enteredPin = ReadTrimmed();
+                string enteredPin = ReadPin();
 
                 if (enteredPin == account.Pin)
                 {
@@ -39,6 +39,29 @@ namespace NewBanking.Presentation
             }
 
             return false;
+        }
+
+        public static string ReadPin()
+        {
+            var sb = new StringBuilder();
+            ConsoleKeyInfo key;
+
+            while ((key = Console.ReadKey(intercept: true)).Key != ConsoleKey.Enter)
+            {
+                if (key.Key == ConsoleKey.Backspace && sb.Length > 0)
+                {
+                    sb.Length--;
+                    Console.Write("\b \b");
+                }
+                else if (char.IsDigit(key.KeyChar) && sb.Length < 4)
+                {
+                    sb.Append(key.KeyChar);
+                    Console.Write('*');
+                }
+            }
+
+            Console.WriteLine();
+            return sb.ToString();
         }
     }
 }

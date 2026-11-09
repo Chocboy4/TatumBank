@@ -9,8 +9,7 @@ namespace NewBanking.Infrastructure
 {
     public static class BankStorage
     {
-        // Incoming HTTP transfers run on a different thread from the menu.
-        // Every change to account data, and every save, happens under this one lock.
+        
         public static readonly object SyncRoot = new();
 
         private static readonly string FileName =

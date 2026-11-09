@@ -67,9 +67,9 @@ namespace NewBanking.Presentation
         {
             while (true)
             {
-                Banner.Display($"Welcome to TatumBank {branch} branch");
+                Banner.Display($"Welcome to ChocboyBank {branch} branch, {current.Name}");
 
-                Console.WriteLine($"\nWelcome to TatumBank {branch} branch, {current.Name}");
+                
 
                 if (current.IsFrozen)
                 {
