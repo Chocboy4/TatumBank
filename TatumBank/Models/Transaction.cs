@@ -16,8 +16,10 @@ namespace TatumBank.Models
 
         public decimal Amount { get; set; }
 
-        // Debit or Credit
+        
         public string TransactionType { get; set; } = string.Empty;
+
+        public string TransactionCategory { get; set; } = string.Empty;
 
         public string Status { get; set; } = string.Empty;
 

@@ -1,4 +1,5 @@
-﻿using TatumBank.Models;
+﻿using TatumBank.DTOs;
+using TatumBank.Models;
 
 namespace TatumBank.Infrastructure.Repositories
 {
@@ -8,5 +9,7 @@ namespace TatumBank.Infrastructure.Repositories
 
         Task<List<Transaction>> GetByAccountNumberAsync(
             string accountNumber);
+
+        Task<IEnumerable<TransactionResponseDto>> FilterAsync(string accountNumber, TransactionFilterDto filter);
     }
 }

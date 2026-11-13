@@ -80,7 +80,7 @@ namespace TatumBank.Controllers
         }
 
         [HttpGet]
-        [Authorize]
+        
         public async Task<IActionResult > GetAllAccounts()
         {
             var accounts = await _accountRepository.GetAllAsync();

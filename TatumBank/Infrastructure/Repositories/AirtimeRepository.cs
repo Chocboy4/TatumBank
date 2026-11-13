@@ -51,33 +51,20 @@ namespace TatumBank.Infrastructure.Repositories
 
                 var reference = $"AIR-{Guid.NewGuid():N}";
 
-                // RecipientAccountNumber is NOT NULL in your current
-                // Transactions table, so use an empty string for airtime.
+                
                 const string insertSql = @"
-                    INSERT INTO Transactions
-                    (
-                        Reference,
-                        SenderAccountNumber,
-                        RecipientAccountNumber,
-                        Amount,
-                        TransactionType,
-                        Status,
-                        AccountNumber,
-                        PhoneNumber,
-                        Network
-                    )
-                    VALUES
-                    (
-                        @Reference,
-                        @AccountNumber,
-                        '',
-                        @Amount,
-                        'Airtime',
-                        'Successful',
-                        @AccountNumber,
-                        @PhoneNumber,
-                        @Network
-                    );";
+    INSERT INTO Transactions
+    (
+        Reference, SenderAccountNumber, RecipientAccountNumber, Amount,
+        TransactionType, TransactionCategory, Description, Status,
+        AccountNumber, PhoneNumber, Network
+    )
+    VALUES
+    (
+        @Reference, @AccountNumber, NULL, @Amount,
+        'Debit', 'Airtime', @Description, 'Successful',
+        @AccountNumber, @PhoneNumber, @Network
+    );";
 
                 await connection.ExecuteAsync(
                     insertSql,
@@ -86,6 +73,7 @@ namespace TatumBank.Infrastructure.Repositories
                         Reference = reference,
                         AccountNumber = accountNumber,
                         Amount = amount,
+                        Description = $"{network} airtime for {phoneNumber}",
                         PhoneNumber = phoneNumber,
                         Network = network
                     },
@@ -112,7 +100,7 @@ namespace TatumBank.Infrastructure.Repositories
                 }
                 catch
                 {
-                    // Preserve the original exception.
+                    
                 }
 
                 throw;

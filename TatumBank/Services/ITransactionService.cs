@@ -6,5 +6,6 @@ namespace TatumBank.Services
     {
         Task<List<TransactionHistoryDto>> GetTransactionHistoryAsync(
             string accountNumber);
+        Task<IEnumerable<TransactionResponseDto>> FilterTransactionsAsync(string accountNumber, TransactionFilterDto filter);
     }
 }

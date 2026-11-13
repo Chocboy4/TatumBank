@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using TatumBank.DTOs;
 using TatumBank.Services;
 
 namespace TatumBank.Controllers
@@ -31,6 +32,27 @@ namespace TatumBank.Controllers
             var transactions = await _transactionService.GetTransactionHistoryAsync(accountNumber);
 
             return Ok(transactions);
+        }
+
+        [HttpGet("Filter")]
+        public async Task<ActionResult<IEnumerable<TransactionResponseDto>>> FilterAsync([FromQuery] TransactionFilterDto filter)
+        {
+            var accountNumber = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if(string.IsNullOrEmpty(accountNumber))
+            {
+                return Unauthorized("Account information was not found.");
+            }
+
+            try
+            {
+                var transactions = await _transactionService.FilterTransactionsAsync(accountNumber, filter);
+                return Ok(transactions);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
     }
 }

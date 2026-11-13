@@ -13,6 +13,33 @@ namespace TatumBank.Services
             _transactionRepository = transactionRepository;
         }
 
+        public async Task<IEnumerable<TransactionResponseDto>> FilterTransactionsAsync(string accountNumber, TransactionFilterDto filter)
+        {
+            if (string.IsNullOrWhiteSpace(accountNumber))
+            {
+                throw new ArgumentException(
+                    "Account number is required.");
+            }
+
+            if(filter.StartDate.HasValue && filter.EndDate.HasValue && filter.StartDate > filter.EndDate)
+            {
+                throw new ArgumentException("Start date cannot be later than end date.");
+            }
+
+            if(!string.IsNullOrEmpty(filter.TransactionType))
+            {
+                var type = filter.TransactionType.ToLower().Trim();
+
+                if (type != "credit" && type != "debit")
+                {
+                    throw new ArgumentException("Transaction type must be either 'Credit' or 'Debit'.");
+                }
+                filter.TransactionType = char.ToUpperInvariant(type[0]) + type.Substring(1); // Capitalize the first letter
+            }
+
+            return await _transactionRepository.FilterAsync(accountNumber, filter);
+        }
+
         public async Task<List<TransactionHistoryDto>>
             GetTransactionHistoryAsync(string accountNumber)
         {

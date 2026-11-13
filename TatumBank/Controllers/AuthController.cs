@@ -65,6 +65,7 @@ namespace TatumBank.Controllers
                 new Claim(ClaimTypes.NameIdentifier, account.AccountNumber),
                 new Claim(ClaimTypes.Name, account.AccountHolderName)
             };
+             
 
             var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
 

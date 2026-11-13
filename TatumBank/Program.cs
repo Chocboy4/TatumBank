@@ -64,6 +64,10 @@ builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddScoped<IAirtimeRepository, AirtimeRepository>();
 builder.Services.AddScoped<IAirtimeService, AirtimeService>();
+builder.Services.AddScoped<IDataPurchaseRepository, DataPurchaseRepository>();
+builder.Services.AddScoped<IDataPurchaseService, DataPurchaseService>();
+builder.Services.AddScoped<IAdminUserRepository, AdminUserRepository>();
+builder.Services.AddScoped<AdminSeeder>();
 
 
 builder.Services.AddHttpClient<IBankBClient, BankBClient>(
@@ -77,6 +81,11 @@ builder.Services.AddHttpClient<IBankBClient, BankBClient>(
 
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    await scope.ServiceProvider.GetRequiredService<AdminSeeder>().SeedAsync();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
