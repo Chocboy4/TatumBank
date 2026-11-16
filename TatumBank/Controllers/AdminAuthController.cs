@@ -7,6 +7,7 @@ using System.Security.Claims;
 using System.Text;
 using TatumBank.Infrastructure.Repositories;
 using TatumBank.Models;
+using TatumBank.Services;
 
 namespace TatumBank.Controllers
 {
@@ -23,12 +24,17 @@ namespace TatumBank.Controllers
     {
         private readonly IConfiguration _configuration;
         private readonly IAdminUserRepository _adminUsers;
+        private readonly IAuditService _audit;
         private readonly PasswordHasher<Admin> _hasher = new();
 
-        public AdminAuthController(IConfiguration configuration, IAdminUserRepository adminUsers)
+        public AdminAuthController(
+            IConfiguration configuration,
+            IAdminUserRepository adminUsers,
+            IAuditService audit)
         {
             _configuration = configuration;
             _adminUsers = adminUsers;
+            _audit = audit;
         }
 
         [HttpPost("login")]
@@ -40,14 +46,20 @@ namespace TatumBank.Controllers
                 return BadRequest("Username and password are required.");
             }
 
-            var admin = await _adminUsers.GetByUsernameAsync(request.Username.Trim().ToLowerInvariant());
+            var username = request.Username.Trim().ToLowerInvariant();
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+            var admin = await _adminUsers.GetByUsernameAsync(username);
 
             if (admin == null || !admin.IsActive ||
                 _hasher.VerifyHashedPassword(admin, admin.PasswordHash, request.Password)
                     == PasswordVerificationResult.Failed)
             {
+                await _audit.LogAsync(admin?.Id, username, "AdminLoginFailed", "Admin", username, $"IP: {ip}");
                 return Unauthorized("Invalid username or password.");
             }
+
+            await _audit.LogAsync(admin.Id, admin.FullName, "AdminLogin", "Admin", admin.Username, $"IP: {ip}");
 
             var jwtSection = _configuration.GetSection("Jwt");
             var key = jwtSection["Key"]

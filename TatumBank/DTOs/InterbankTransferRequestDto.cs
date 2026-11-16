@@ -2,7 +2,7 @@
 {
     public class InterbankTransferRequestDto
     {
-        public string Refrence { get; set; } = string.Empty;
+        public string Reference { get; set; } = string.Empty;
         public string SenderAccountNumber { get; set; } = string.Empty;
 
         public string SenderBankCode { get; set; } = "TatumBank";

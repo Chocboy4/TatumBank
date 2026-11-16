@@ -11,7 +11,7 @@ namespace TatumBank.Services
 
         private static readonly string[] AllowedNetworks =
         {
-            "MTN", "AIRTEL", "GLO", "ETISALAT"
+            "MTN", "AIRTEL", "GLO", "9MOBILE"
         };
 
         public AirtimeService(IAirtimeRepository airtimeRepository)
@@ -30,7 +30,7 @@ namespace TatumBank.Services
                 throw new ArgumentException(
                     "Amount must be between 50 and 100000.");
 
-            var network = request.Network.Trim().ToUpperInvariant();
+            var network = (request.Network ?? string.Empty).Trim().ToUpperInvariant();
 
             if (!AllowedNetworks.Contains(network))
                 throw new ArgumentException(

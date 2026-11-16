@@ -9,12 +9,12 @@ namespace TatumBank.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class BankingController : ControllerBase
+    public class BankingServiceController : ControllerBase
     {
         private readonly IBankingService _bankingService;
         private readonly ITransactionService _transactionService;
 
-        public BankingController(
+        public BankingServiceController(
             IBankingService bankingService,
             ITransactionService transactionService)
         {
@@ -75,6 +75,74 @@ namespace TatumBank.Controllers
             }
 
             return Ok(response);
+        }
+
+        [HttpPost("Deposit")]
+        public async Task<IActionResult> Deposit([FromBody] AmountRequestDto request)
+        {
+            var accountNumber = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if(string.IsNullOrEmpty(accountNumber))
+            {
+                return Unauthorized("You are not Logged In");
+            }
+
+            try
+            {
+                var success = await _bankingService.DepositAsync(accountNumber, request.Amount);
+
+                if(!success)
+                {
+                    return BadRequest("Deposit failed.");
+                }
+
+                var balance = await _bankingService.GetBalanceAsync(accountNumber);
+
+                return Ok(new { Message = "Deposit successful.", balance });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("Withdraw")]
+        public async Task<IActionResult> Withdraw([FromBody] AmountRequestDto request)
+        {
+            var accountNumber = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(accountNumber))
+            {
+                return Unauthorized("You are not Logged In");
+            }
+
+            try
+            {
+                var success = await _bankingService.WithdrawAsync(accountNumber, request.Amount);
+
+                if (!success)
+                {
+                    return BadRequest("Withdrawal could not be completed.");
+                }
+                var balance = await _bankingService.GetBalanceAsync(accountNumber);
+                return Ok(new { Message = "Withdrawal successful.", balance });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpGet("Transactions")]

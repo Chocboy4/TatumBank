@@ -68,15 +68,25 @@ builder.Services.AddScoped<IDataPurchaseRepository, DataPurchaseRepository>();
 builder.Services.AddScoped<IDataPurchaseService, DataPurchaseService>();
 builder.Services.AddScoped<IAdminUserRepository, AdminUserRepository>();
 builder.Services.AddScoped<AdminSeeder>();
+builder.Services.AddScoped<IAdminUserRepository, AdminUserRepository>();
+builder.Services.AddScoped<IAdminRepository, AdminRepository>();
+builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<AdminSeeder>();
+builder.Services.AddScoped<IInterbankTransferRepository, InterbankTransferRepository>();
 
-
-builder.Services.AddHttpClient<IBankBClient, BankBClient>(
+builder.Services.AddHttpClient<IChocboyBankClient, ChocboyBankClient>(
     client =>
     {
         client.BaseAddress = new Uri(
-            builder.Configuration["BankB:BaseUrl"]
-            ?? throw new InvalidOperationException(
-                "BankB BaseUrl is not configured."));
+            builder.Configuration["ChocboyBank:BaseUrl"]
+            ?? throw new InvalidOperationException("ChocboyBank BaseUrl is not configured."));
+        client.Timeout = TimeSpan.FromSeconds(15);
+
+        var apiKey = builder.Configuration["ChocboyBank:ApiKey"];
+        if (!string.IsNullOrWhiteSpace(apiKey))
+            client.DefaultRequestHeaders.Add("X-Api-Key", apiKey);
     });
 
 

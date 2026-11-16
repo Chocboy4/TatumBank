@@ -134,6 +134,8 @@ namespace TatumBank.Infrastructure.Repositories
                     RecipientAccountNumber,
                     Amount,
                     TransactionType,
+                    TransactionCategory,
+                    Description,
                     Status,
                     CreatedAt
                 FROM Transactions

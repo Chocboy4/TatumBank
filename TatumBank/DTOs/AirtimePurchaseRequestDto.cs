@@ -10,10 +10,6 @@ namespace TatumBank.DTOs
         public string PhoneNumber { get; set; } = string.Empty;
 
         [Required]
-        [RegularExpression(
-            "^(MTN|AIRTEL|GLO|ETISALAT)$",
-            ErrorMessage = "Network must be MTN, AIRTEL, GLO, or ETISALAT."
-        )]
         public string Network { get; set; } = string.Empty;
 
         [Range(50, 100000,

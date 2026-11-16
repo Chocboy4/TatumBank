@@ -1,6 +1,7 @@
 ﻿
 using Dapper;
 using TatumBank.DTOs;
+using TatumBank.Models;
 
 namespace TatumBank.Infrastructure.Repositories
 {
@@ -43,10 +44,21 @@ namespace TatumBank.Infrastructure.Repositories
 
                 if (rowsAffected != 1)
                 {
+                    var account = await connection.QuerySingleOrDefaultAsync<Account>(
+                        @"SELECT AccountNumber, Balance, IsFrozen
+          FROM Accounts WHERE AccountNumber = @AccountNumber;",
+                        new { AccountNumber = accountNumber },
+                        transaction);
+
                     transaction.Rollback();
 
-                    throw new InvalidOperationException(
-                        "Account not found or insufficient balance.");
+                    if (account == null)
+                        throw new InvalidOperationException("Account not found.");
+
+                    if (account.IsFrozen)
+                        throw new InvalidOperationException("Your account is frozen and cannot buy airtime.");
+
+                    throw new InvalidOperationException("Insufficient balance.");
                 }
 
                 var reference = $"AIR-{Guid.NewGuid():N}";

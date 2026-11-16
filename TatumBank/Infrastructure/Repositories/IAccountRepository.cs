@@ -9,8 +9,10 @@ namespace TatumBank.Infrastructure.Repositories
         Task<List<Account>> GetAllAsync();
         Task<bool> UpdateBalance(string accountNumber, decimal balance);
 
+        Task<bool> DepositAsync(string accountNumber, decimal amount, string reference);
+        Task<bool> WithdrawAsync(string accountNumber, decimal amount, string reference);
+
         Task<bool> TransferAsync(string senderAccountNumber, string recipientAccountNumber, decimal amount, string reference);
 
-        Task<List<Transaction>> GetTransactionHistoryAsync(string accountNumber);
     }
 }

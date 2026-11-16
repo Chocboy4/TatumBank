@@ -1,5 +1,4 @@
-﻿
-using Dapper;
+﻿using Dapper;
 using TatumBank.Models;
 
 namespace TatumBank.Infrastructure.Repositories
@@ -59,6 +58,7 @@ namespace TatumBank.Infrastructure.Repositories
                     AccountHolderName,
                     Balance,
                     PasswordHash,
+                    IsFrozen,
                     CreatedAt
                 FROM Accounts
                 WHERE AccountNumber = @AccountNumber;
@@ -79,6 +79,7 @@ namespace TatumBank.Infrastructure.Repositories
                     AccountNumber,
                     AccountHolderName,
                     Balance,
+                    IsFrozen,
                     CreatedAt
                 FROM Accounts;
                 """;
@@ -86,11 +87,6 @@ namespace TatumBank.Infrastructure.Repositories
             var accounts = await connection.QueryAsync<Account>(sql);
 
             return accounts.ToList();
-        }
-
-        public Task<List<Transaction>> GetTransactionHistoryAsync(string accountNumber)
-        {
-            throw new NotImplementedException();
         }
 
         public async Task<bool> TransferAsync(
@@ -109,7 +105,9 @@ namespace TatumBank.Infrastructure.Repositories
             }
 
             using var connection = _connectionFactory.CreateConnection();
-            connection.Open();
+
+            if (connection.State != System.Data.ConnectionState.Open)
+                connection.Open();
 
             using var transaction = connection.BeginTransaction();
 
@@ -120,7 +118,8 @@ namespace TatumBank.Infrastructure.Repositories
                         Id,
                         AccountNumber,
                         AccountHolderName,
-                        Balance
+                        Balance,
+                        IsFrozen
                     FROM Accounts
                     WHERE AccountNumber = @AccountNumber
                     FOR UPDATE;
@@ -161,7 +160,8 @@ namespace TatumBank.Infrastructure.Repositories
                     ? firstAccount
                     : secondAccount;
 
-                if (sender.Balance < amount)
+                // The sender row is locked now, so these checks cannot go stale.
+                if (sender.IsFrozen || sender.Balance < amount)
                 {
                     transaction.Rollback();
                     return false;
@@ -172,7 +172,8 @@ namespace TatumBank.Infrastructure.Repositories
                     UPDATE Accounts
                     SET Balance = Balance - @Amount
                     WHERE AccountNumber = @AccountNumber
-                      AND Balance >= @Amount;
+                      AND Balance >= @Amount
+                      AND IsFrozen = 0;
                     """;
 
                 int debited = await connection.ExecuteAsync(
@@ -190,7 +191,7 @@ namespace TatumBank.Infrastructure.Repositories
                     return false;
                 }
 
-                // 2. Credit the recipient.
+                // 2. Credit the recipient. A frozen account can still receive.
                 const string creditSql = """
                     UPDATE Accounts
                     SET Balance = Balance + @Amount
@@ -212,27 +213,31 @@ namespace TatumBank.Infrastructure.Repositories
                     return false;
                 }
 
-                // 3. Record one transaction for the entire transfer.
+                // 3. Record one transaction for the whole transfer.
                 const string insertTransactionSql = """
-            INSERT INTO Transactions
-            (
-                Reference,
-                SenderAccountNumber,
-                RecipientAccountNumber,
-                Amount,
-                TransactionType,
-                Status
-            )
-            VALUES
-            (
-                @Reference,
-                @SenderAccountNumber,
-                @RecipientAccountNumber,
-                @Amount,
-                @TransactionType,
-                @Status
-            );
-            """;
+                    INSERT INTO Transactions
+                    (
+                        Reference,
+                        SenderAccountNumber,
+                        RecipientAccountNumber,
+                        Amount,
+                        TransactionType,
+                        TransactionCategory,
+                        Description,
+                        Status
+                    )
+                    VALUES
+                    (
+                        @Reference,
+                        @SenderAccountNumber,
+                        @RecipientAccountNumber,
+                        @Amount,
+                        'Debit',
+                        'Transfer',
+                        @Description,
+                        'Successful'
+                    );
+                    """;
 
                 await connection.ExecuteAsync(
                     insertTransactionSql,
@@ -242,20 +247,17 @@ namespace TatumBank.Infrastructure.Repositories
                         SenderAccountNumber = senderAccountNumber,
                         RecipientAccountNumber = recipientAccountNumber,
                         Amount = amount,
-                        TransactionType = "Transfer",
-                        Status = "Successful"
+                        Description = $"Transfer from {senderAccountNumber} to {recipientAccountNumber}"
                     },
                     transaction);
 
-                // 6. Commit all changes together.
+                // 4. Commit everything together.
                 transaction.Commit();
 
                 return true;
             }
             catch
             {
-                // Roll back balance changes and transaction entries
-                // if any operation fails before the commit.
                 try
                 {
                     transaction.Rollback();
@@ -267,6 +269,49 @@ namespace TatumBank.Infrastructure.Repositories
 
                 throw;
             }
+        }
+
+        
+        public async Task<bool> CreditAsync(string accountNumber, decimal amount)
+        {
+            if (amount <= 0) return false;
+
+            using var connection = _connectionFactory.CreateConnection();
+
+            const string sql = """
+                UPDATE Accounts
+                SET Balance = Balance + @Amount
+                WHERE AccountNumber = @AccountNumber;
+                """;
+
+            var rowsAffected = await connection.ExecuteAsync(
+                sql,
+                new { AccountNumber = accountNumber, Amount = amount });
+
+            return rowsAffected == 1;
+        }
+
+        // Removes money only if the funds are there and the account is not frozen,
+        // all in the same statement.
+        public async Task<bool> DebitAsync(string accountNumber, decimal amount)
+        {
+            if (amount <= 0) return false;
+
+            using var connection = _connectionFactory.CreateConnection();
+
+            const string sql = """
+                UPDATE Accounts
+                SET Balance = Balance - @Amount
+                WHERE AccountNumber = @AccountNumber
+                  AND Balance >= @Amount
+                  AND IsFrozen = 0;
+                """;
+
+            var rowsAffected = await connection.ExecuteAsync(
+                sql,
+                new { AccountNumber = accountNumber, Amount = amount });
+
+            return rowsAffected == 1;
         }
 
         public async Task<bool> UpdateBalance(
@@ -291,5 +336,168 @@ namespace TatumBank.Infrastructure.Repositories
 
             return rowsAffected > 0;
         }
+
+        // Adds the money and records the deposit in one database transaction.
+public async Task<bool> DepositAsync(
+    string accountNumber,
+    decimal amount,
+    string reference)
+{
+    if (amount <= 0 ||
+        string.IsNullOrWhiteSpace(accountNumber) ||
+        string.IsNullOrWhiteSpace(reference))
+    {
+        return false;
+    }
+
+    using var connection = _connectionFactory.CreateConnection();
+
+    if (connection.State != System.Data.ConnectionState.Open)
+        connection.Open();
+
+    using var transaction = connection.BeginTransaction();
+
+    try
+    {
+        const string creditSql = """
+            UPDATE Accounts
+            SET Balance = Balance + @Amount
+            WHERE AccountNumber = @AccountNumber;
+            """;
+
+        var rows = await connection.ExecuteAsync(
+            creditSql,
+            new { AccountNumber = accountNumber, Amount = amount },
+            transaction);
+
+        if (rows != 1)
+        {
+            transaction.Rollback();
+            return false;
+        }
+
+        const string insertSql = """
+            INSERT INTO Transactions
+            (
+                Reference,
+                SenderAccountNumber,
+                RecipientAccountNumber,
+                Amount,
+                TransactionType,
+                TransactionCategory,
+                Description,
+                Status,
+                AccountNumber
+            )
+            VALUES
+            (
+                @Reference,
+                NULL,
+                @AccountNumber,
+                @Amount,
+                'Credit',
+                'Deposit',
+                'Deposit',
+                'Successful',
+                @AccountNumber
+            );
+            """;
+
+        await connection.ExecuteAsync(
+            insertSql,
+            new { Reference = reference, AccountNumber = accountNumber, Amount = amount },
+            transaction);
+
+        transaction.Commit();
+        return true;
+    }
+    catch
+    {
+        try { transaction.Rollback(); } catch { }
+        throw;
+    }
+}
+
+public async Task<bool> WithdrawAsync(
+    string accountNumber,
+    decimal amount,
+    string reference)
+{
+    if (amount <= 0 ||
+        string.IsNullOrWhiteSpace(accountNumber) ||
+        string.IsNullOrWhiteSpace(reference))
+    {
+        return false;
+    }
+
+    using var connection = _connectionFactory.CreateConnection();
+
+    if (connection.State != System.Data.ConnectionState.Open)
+        connection.Open();
+
+    using var transaction = connection.BeginTransaction();
+
+    try
+    {
+        const string debitSql = """
+            UPDATE Accounts
+            SET Balance = Balance - @Amount
+            WHERE AccountNumber = @AccountNumber
+              AND Balance >= @Amount
+              AND IsFrozen = 0;
+            """;
+
+        var rows = await connection.ExecuteAsync(
+            debitSql,
+            new { AccountNumber = accountNumber, Amount = amount },
+            transaction);
+
+        if (rows != 1)
+        {
+            transaction.Rollback();
+            return false;
+        }
+
+        const string insertSql = """
+            INSERT INTO Transactions
+            (
+                Reference,
+                SenderAccountNumber,
+                RecipientAccountNumber,
+                Amount,
+                TransactionType,
+                TransactionCategory,
+                Description,
+                Status,
+                AccountNumber
+            )
+            VALUES
+            (
+                @Reference,
+                @AccountNumber,
+                NULL,
+                @Amount,
+                'Debit',
+                'Withdrawal',
+                'Withdrawal',
+                'Successful',
+                @AccountNumber
+            );
+            """;
+
+        await connection.ExecuteAsync(
+            insertSql,
+            new { Reference = reference, AccountNumber = accountNumber, Amount = amount },
+            transaction);
+
+        transaction.Commit();
+        return true;
+    }
+    catch
+    {
+        try { transaction.Rollback(); } catch { }
+        throw;
+    }
+}
     }
 }
