@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.1.89" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="11.0.0" />
+    <PackageReference Include="MySqlConnector" Version="3.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TatumBank.Application\TatumBank.Application.csproj" />
+    <ProjectReference Include="..\TatumBank.Contracts\TatumBank.Contracts.csproj" />
+    <ProjectReference Include="..\TatumBank.Domain\TatumBank.Domain.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

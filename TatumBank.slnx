@@ -1,3 +1,5 @@
 <Solution>
+  <Project Path="TatumBank.Application/TatumBank.Application.csproj" Id="c6ed8890-e491-4e1d-b51b-05fa57791a9d" />
+  <Project Path="TatumBank.Infrastructure/TatumBank.Infrastructure.csproj" Id="f7383e1d-bef5-4381-82dc-6391cf3f5505" />
   <Project Path="TatumBank/TatumBank.csproj" />
 </Solution>

@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="TatumBank.Application/TatumBank.Application.csproj" />
+  <Project Path="TatumBank.Contracts/TatumBank.Contracts.csproj" />
+  <Project Path="TatumBank.csproj" />
+  <Project Path="TatumBank.Domain/TatumBank.Domain.csproj" />
+  <Project Path="TatumBank.Infrastructure/TatumBank.Infrastructure.csproj" />
+</Solution>

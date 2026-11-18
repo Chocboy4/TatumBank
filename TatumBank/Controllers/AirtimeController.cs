@@ -33,16 +33,25 @@ namespace TatumBank.Controllers
             try
             {
                 var result = await _airtimeService.PurchaseAirtimeAsync(accountNumber, request);
+
+                if (result.Status == "Pending")
+                {
+                    return Accepted(result);
+                }
+
+                if (result.Status != "Successful")
+                {
+                    return BadRequest(new { message = result.Message });
+                }
+
                 return Ok(result);
             }
-
             catch (ArgumentException ex)
             {
                 return BadRequest(new { message = ex.Message });
             }
             catch (InvalidOperationException ex)
             {
-                
                 return BadRequest(new { message = ex.Message });
             }
         }

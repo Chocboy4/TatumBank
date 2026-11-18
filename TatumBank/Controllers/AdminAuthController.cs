@@ -5,8 +5,9 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using TatumBank.Application.Abstractions;
+using TatumBank.Domain.Entities;
 using TatumBank.Infrastructure.Repositories;
-using TatumBank.Models;
 using TatumBank.Services;
 
 namespace TatumBank.Controllers

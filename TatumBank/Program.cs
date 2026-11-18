@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
+using TatumBank.Application.Abstractions;
+using TatumBank.Filters;
 using TatumBank.HttpClients;
 using TatumBank.Infrastructure;
 using TatumBank.Infrastructure.Repositories;
@@ -75,16 +77,18 @@ builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<AdminSeeder>();
 builder.Services.AddScoped<IInterbankTransferRepository, InterbankTransferRepository>();
+builder.Services.AddScoped<IIncomingTransferRepository, IncomingTransferRepository>();
+builder.Services.AddScoped<InterbankApiKeyFilter>();
 
 builder.Services.AddHttpClient<IChocboyBankClient, ChocboyBankClient>(
     client =>
     {
         client.BaseAddress = new Uri(
-            builder.Configuration["ChocboyBank:BaseUrl"]
-            ?? throw new InvalidOperationException("ChocboyBank BaseUrl is not configured."));
+            builder.Configuration["BankOfChocboy:BaseUrl"]
+            ?? throw new InvalidOperationException("BankOfChocboy BaseUrl is not configured."));
         client.Timeout = TimeSpan.FromSeconds(15);
 
-        var apiKey = builder.Configuration["ChocboyBank:ApiKey"];
+        var apiKey = builder.Configuration["BankOfChocboy:ApiKey"];
         if (!string.IsNullOrWhiteSpace(apiKey))
             client.DefaultRequestHeaders.Add("X-Api-Key", apiKey);
     });

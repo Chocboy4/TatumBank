@@ -2,9 +2,10 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MySqlConnector;
+using TatumBank.Application.Abstractions;
 using TatumBank.DTOs;
 using TatumBank.Infrastructure.Repositories;
-using TatumBank.Models;
+using TatumBank.Domain.Entities;
 using TatumBank.Services;
 
 namespace TatumBank.Controllers
@@ -96,7 +97,11 @@ namespace TatumBank.Controllers
                 return NotFound($"Account with number {accountNumber} not found.");
             }
 
-            return Ok(account);
+            return Ok(new InterbankAccountLookupResponseDto
+            {
+                AccountNumber = account.AccountNumber,
+                AccountHolderName = account.AccountHolderName
+            });
         }
 
         [HttpGet("balance")]

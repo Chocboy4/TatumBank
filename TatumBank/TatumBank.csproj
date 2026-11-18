@@ -11,11 +11,38 @@
     <PackageReference Include="Dapper" Version="2.1.89" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.14" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.1" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.2" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="11.0.0" />
     <PackageReference Include="MySqlConnector" Version="3.0.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.3.1" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" Version="9.0.21" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="TatumBank.Application\TatumBank.Application.csproj" />
+    <ProjectReference Include="TatumBank.Infrastructure\TatumBank.Infrastructure.csproj" />
+
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="**\obj\**" />
+    <Compile Remove="**\bin\**" />
+    <Compile Remove="TatumBank.Application\**" />
+    <Compile Remove="TatumBank.Contracts\**" />
+    <Compile Remove="TatumBank.Domain\**" />
+    <Compile Remove="TatumBank.Infrastructure\**" />
+    <EmbeddedResource Remove="TatumBank.Application\**" />
+    <EmbeddedResource Remove="TatumBank.Contracts\**" />
+    <EmbeddedResource Remove="TatumBank.Domain\**" />
+    <EmbeddedResource Remove="TatumBank.Infrastructure\**" />
+    <None Remove="TatumBank.Application\**" />
+    <None Remove="TatumBank.Contracts\**" />
+    <None Remove="TatumBank.Domain\**" />
+    <None Remove="TatumBank.Infrastructure\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Models\" />
   </ItemGroup>
 
 </Project>
